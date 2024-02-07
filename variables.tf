@@ -21,3 +21,9 @@ variable "subscription_id" {
   sensitive = true
   default = "*******************************"
 }
+
+variable "number_of_subnets" {
+  type = number
+  default = 2
+  
+}
