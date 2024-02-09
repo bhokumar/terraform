@@ -48,16 +48,28 @@ resource "azurerm_network_security_group" "network_security_group_dev1" {
  depends_on = [ azurerm_resource_group.app_rg_1101_dev01 ]
 
  security_rule {
-     name = "SSH"
+     name = "RDP"
      priority = 1000
      direction = "Inbound"
      access = "Allow"
      protocol = "Tcp"
      source_port_range = "*"
-     destination_port_range = "22"
+     destination_port_range = "3389"
      source_address_prefix = "*"
      destination_address_prefix = "*"
    }
+
+  security_rule {
+        name = "HTTP"
+        priority = 1001
+        direction = "Inbound"
+        access = "Allow"
+        protocol = "Tcp"
+        source_port_range = "*"
+        destination_port_range = "80"
+        source_address_prefix = "*"
+        destination_address_prefix = "*"
+  }
 
 }
 
@@ -123,52 +135,67 @@ resource "azurerm_network_interface" "app_interface_dev1" {
   depends_on = [ azurerm_subnet.subneta ]
 }
 
-resource "tls_private_key" "linuxkey" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
+resource "azurerm_network_interface" "app_interface_dev11" {
+  name                = local.app_interface_dev11.name
+  location            = azurerm_resource_group.app_rg_1101_dev01.location
+  resource_group_name = azurerm_resource_group.app_rg_1101_dev01.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.subneta.id
+    private_ip_address_allocation = "Dynamic"
+  }
+
+  depends_on = [ azurerm_subnet.subneta ]
 }
 
-resource "local_file" "linuxpemkey" {
-  filename = "linuxkey.pem"
-  content  = tls_private_key.linuxkey.private_key_pem
-  depends_on = [ tls_private_key.linuxkey ]
-}
-resource "azurerm_linux_virtual_machine" "dev1_windows_server" {
+resource "azurerm_windows_virtual_machine" "dev1_windows_server" {
   name                = "dev1appvm"
   resource_group_name = azurerm_resource_group.app_rg_1101_dev01.name
   location            = azurerm_resource_group.app_rg_1101_dev01.location
   size                = "Standard_D2S_v3"
-  admin_username      = "linuxuser"
-
+  admin_username      = "adminuser"
+  admin_password = "Azure@123"
   network_interface_ids = [
     azurerm_network_interface.app_interface_dev1.id,
+    azurerm_network_interface.app_interface_dev11.id
   ]
 
-  admin_ssh_key {
-    username   = "linuxuser"
-    public_key = tls_private_key.linuxkey.public_key_openssh
-  }
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
   }
 
   source_image_reference {
-    publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-focal"
-    sku       = "20_04-lts"
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2019-Datacenter"
     version   = "latest"
   }
 
-  depends_on = [ 
-    azurerm_network_interface.app_interface_dev1, 
-    azurerm_resource_group.app_rg_1101_dev01,
-    tls_private_key.linuxkey
-    ]
+  depends_on = [ azurerm_network_interface.app_interface_dev1, azurerm_resource_group.app_rg_1101_dev01 ]
+}
+
+resource "azurerm_managed_disk" "datadisk1" {
+  name                 = "datadisk1"
+  location             = azurerm_resource_group.app_rg_1101_dev01.location
+  resource_group_name  = azurerm_resource_group.app_rg_1101_dev01.name
+  storage_account_type = "Standard_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = "16"
+
+  tags = {
+    environment = "staging"
+  }
 }
 
 
-
+resource "azurerm_virtual_machine_data_disk_attachment" "datadiskattachment1" {
+  managed_disk_id    = azurerm_managed_disk.datadisk1.id
+  virtual_machine_id = azurerm_windows_virtual_machine.dev1_windows_server.id
+  lun                = "10"
+  caching            = "ReadWrite"
+}
 
 output "subnet_id" {
   value = azurerm_subnet.subneta.id
