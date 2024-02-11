@@ -8,6 +8,7 @@ terraform {
 }
 
 
+
 locals {
   resource_group_name = "RG_1101_DEV01"
   location = "Central India"
@@ -137,6 +138,32 @@ resource "azurerm_network_interface" "app_interface_dev1" {
   }
 
   depends_on = [ azurerm_subnet.subneta ]
+}
+
+resource "azurerm_windows_virtual_machine" "dev1_windows_server" {
+  name                = "dev1appvm"
+  resource_group_name = azurerm_resource_group.app_rg_1101_dev01.name
+  location            = azurerm_resource_group.app_rg_1101_dev01.location
+  size                = "Standard_D2S_v3"
+  admin_username      = "adminuser"
+  admin_password = "Azure@123"
+  network_interface_ids = [
+    azurerm_network_interface.app_interface_dev1.id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2019-Datacenter"
+    version   = "latest"
+  }
+
+  depends_on = [ azurerm_network_interface.app_interface_dev1, azurerm_resource_group.app_rg_1101_dev01 ]
 }
 
 output "subnet_id" {
