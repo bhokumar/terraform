@@ -33,6 +33,11 @@ locals {
     name = "app_interface_dev1"
   }
 
+  dev1_public_ip = {
+    name = "app_ip_dev1"
+    allocation_method = "Static"
+  }
+
 }
 resource "azurerm_resource_group" "app_rg_1101_dev01" {
   name     = local.resource_group_name
@@ -78,6 +83,17 @@ resource "azurerm_subnet" "subnetb" {
   depends_on = [ azurerm_virtual_network.virtual_network_dev1 ]
 }
 
+resource "azurerm_public_ip" "app_ip_dev1" {
+  name                    = local.dev1_public_ip.name
+  location                = azurerm_resource_group.app_rg_1101_dev01.location
+  resource_group_name     = azurerm_resource_group.app_rg_1101_dev01.name
+  allocation_method       = local.dev1_public_ip.allocation_method
+  idle_timeout_in_minutes = 30
+
+  tags = {
+    environment = "test"
+  }
+}
 
 resource "azurerm_network_interface" "app_interface_dev1" {
   name                = local.dev1_network_interface.name
@@ -88,6 +104,7 @@ resource "azurerm_network_interface" "app_interface_dev1" {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.subneta.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.app_ip_dev1.id
   }
 
   depends_on = [ azurerm_subnet.subneta ]
