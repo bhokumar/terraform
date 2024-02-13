@@ -8,8 +8,6 @@ terraform {
 }
 
 
-
-
 locals {
   resource_group_name = "RG_1101_DEV01"
   location = "Central India"
@@ -93,4 +91,8 @@ resource "azurerm_network_interface" "app_interface_dev1" {
   }
 
   depends_on = [ azurerm_subnet.subneta ]
+}
+
+output "subnet_id" {
+  value = azurerm_subnet.subneta.id
 }
