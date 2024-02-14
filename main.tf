@@ -8,6 +8,8 @@ terraform {
 }
 
 
+
+
 locals {
   resource_group_name = "RG_1101_DEV01"
   location = "Central India"
@@ -28,6 +30,9 @@ locals {
         address_prefix = "10.0.1.0/24"
       } 
     ]
+  }
+  dev1_network_interface = {
+    name = "app_interface_dev1"
   }
 
 }
@@ -51,18 +56,41 @@ resource "azurerm_virtual_network" "virtual_network_dev1" {
   resource_group_name = azurerm_resource_group.app_rg_1101_dev01.name
   address_space       = [local.virtual_network.address_space]
 
-  subnet {
-    name           = local.virtual_network.subnets[0].name
-    address_prefix = local.virtual_network.subnets[0].address_prefix
-  }
-
-  subnet {
-    name           = local.virtual_network.subnets[1].name
-    address_prefix = local.virtual_network.subnets[1].address_prefix
-  }
 
   tags = {
     environment = "Production"
   }
   depends_on = [ azurerm_resource_group.app_rg_1101_dev01 ]
+}
+
+resource "azurerm_subnet" "subneta" {
+  name                 = local.virtual_network.subnets[0].name
+  resource_group_name  = azurerm_resource_group.app_rg_1101_dev01.name
+  virtual_network_name = azurerm_virtual_network.virtual_network_dev1.name
+  address_prefixes     = [local.virtual_network.subnets[0].address_prefix]
+  depends_on = [ azurerm_virtual_network.virtual_network_dev1 ]
+}
+
+
+resource "azurerm_subnet" "subnetb" {
+  name                 = local.virtual_network.subnets[1].name
+  resource_group_name  = azurerm_resource_group.app_rg_1101_dev01.name
+  virtual_network_name = azurerm_virtual_network.virtual_network_dev1.name
+  address_prefixes     = [local.virtual_network.subnets[1].address_prefix]
+  depends_on = [ azurerm_virtual_network.virtual_network_dev1 ]
+}
+
+
+resource "azurerm_network_interface" "app_interface_dev1" {
+  name                = local.dev1_network_interface.name
+  location            = azurerm_resource_group.app_rg_1101_dev01.location
+  resource_group_name = azurerm_resource_group.app_rg_1101_dev01.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.subneta.id
+    private_ip_address_allocation = "Dynamic"
+  }
+
+  depends_on = [ azurerm_subnet.subneta ]
 }
