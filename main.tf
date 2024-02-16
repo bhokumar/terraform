@@ -2,36 +2,44 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">= 2.0"
+      version = "3.92.0"
     }
   }
 }
 
-provider "azurerm" {
-  features {}
+
+
+
+resource "azurerm_resource_group" "app_rg_1101_dev01" {
+  name     = "RG_1101_DEV01"
+  location = "Central India"
 }
 
-resource "azurerm_resource_group" "cosmosdb_rg" {
-  name     = "cosmosdb-resource-group"
-  location = "eastus"
-}
 
-resource "azurerm_cosmosdb_account" "cosmosdb" {
-  name                = "cosmosdb-account"
-  resource_group_name = azurerm_resource_group.cosmosdb_rg.name
-  location            = azurerm_resource_group.cosmosdb_rg.location
-  offer_type          = "Standard"
-  kind                = "GlobalDocumentDB"
 
-  consistency_policy {
-    consistency_level       = "Session"
-    max_interval_in_seconds = 5
-    max_staleness_prefix    = 100
-  }
-
-  enable_automatic_failover = false
+resource "azurerm_storage_account" "storage_dev01" {
+  name                     = "storageaccount1101dev01"
+  resource_group_name      = azurerm_resource_group.app_rg_1101_dev01.name
+  location                 = azurerm_resource_group.app_rg_1101_dev01.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  account_kind = "StorageV2"
 
   tags = {
-    environment = "dev"
+    environment = "staging"
   }
+}
+
+resource "azurerm_storage_container" "gsspcontainer" {
+  name                  = "gsspcontainer"
+  storage_account_name  = azurerm_storage_account.storage_dev01.name
+  container_access_type = "blob"
+}
+
+resource "azurerm_storage_blob" "maintf" {
+  name                   = "main.tf"
+  storage_account_name   = azurerm_storage_account.storage_dev01.name
+  storage_container_name = azurerm_storage_container.gsspcontainer.name
+  type                   = "Block"
+  source                 = "main.tf"
 }
