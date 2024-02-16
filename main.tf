@@ -28,12 +28,14 @@ resource "azurerm_storage_account" "storage_dev01" {
   tags = {
     environment = "staging"
   }
+  depends_on = [ azurerm_resource_group.app_rg_1101_dev01 ]
 }
 
 resource "azurerm_storage_container" "gsspcontainer" {
   name                  = "gsspcontainer"
   storage_account_name  = azurerm_storage_account.storage_dev01.name
   container_access_type = "blob"
+  depends_on = [ azurerm_storage_account.storage_dev01 ]
 }
 
 resource "azurerm_storage_blob" "maintf" {
