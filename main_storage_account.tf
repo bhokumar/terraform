@@ -8,8 +8,6 @@ terraform {
 }
 
 
-
-
 resource "azurerm_resource_group" "app_rg_1101_dev01" {
   name     = "RG_1101_DEV01"
   location = "Central India"
