@@ -25,6 +25,10 @@ locals {
     name = "app_interface_dev1"
   }
 
+  app_interface_dev11 = {
+    name = "app_interface_dev11"
+  }
+
   dev1_public_ip = {
     name = "app_ip_dev1"
     allocation_method = "Static"
@@ -131,6 +135,20 @@ resource "azurerm_network_interface" "app_interface_dev1" {
   depends_on = [ azurerm_subnet.subneta ]
 }
 
+resource "azurerm_network_interface" "app_interface_dev11" {
+  name                = local.app_interface_dev11.name
+  location            = azurerm_resource_group.app_rg_1101_dev01.location
+  resource_group_name = azurerm_resource_group.app_rg_1101_dev01.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.subneta.id
+    private_ip_address_allocation = "Dynamic"
+  }
+
+  depends_on = [ azurerm_subnet.subneta ]
+}
+
 resource "azurerm_windows_virtual_machine" "dev1_windows_server" {
   name                = "dev1appvm"
   resource_group_name = azurerm_resource_group.app_rg_1101_dev01.name
@@ -140,6 +158,7 @@ resource "azurerm_windows_virtual_machine" "dev1_windows_server" {
   admin_password = "Azure@123"
   network_interface_ids = [
     azurerm_network_interface.app_interface_dev1.id,
+    azurerm_network_interface.app_interface_dev11.id
   ]
 
   os_disk {
