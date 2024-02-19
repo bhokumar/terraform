@@ -176,6 +176,27 @@ resource "azurerm_windows_virtual_machine" "dev1_windows_server" {
   depends_on = [ azurerm_network_interface.app_interface_dev1, azurerm_resource_group.app_rg_1101_dev01 ]
 }
 
+resource "azurerm_managed_disk" "datadisk1" {
+  name                 = "datadisk1"
+  location             = azurerm_resource_group.app_rg_1101_dev01.location
+  resource_group_name  = azurerm_resource_group.app_rg_1101_dev01.name
+  storage_account_type = "Standard_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = "16"
+
+  tags = {
+    environment = "staging"
+  }
+}
+
+
+resource "azurerm_virtual_machine_data_disk_attachment" "datadiskattachment1" {
+  managed_disk_id    = azurerm_managed_disk.datadisk1.id
+  virtual_machine_id = azurerm_windows_virtual_machine.dev1_windows_server.id
+  lun                = "10"
+  caching            = "ReadWrite"
+}
+
 output "subnet_id" {
   value = azurerm_subnet.subneta.id
 }
