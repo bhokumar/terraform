@@ -8,15 +8,20 @@ locals {
   virtual_network = {
     name = "virtual_network_dev01"
     address_space = "10.0.0.0/16"
+
     subnets = [
       {
-        name = "subneta"
-        address_prefix = "10.0.0.0/24"
+        name = "subnet1"
+        address_prefix = "10.0.1.0/24"
       },
       {
-        name = "subnetb"
-        address_prefix = "10.0.1.0/24"
-      } 
+        name = "subnet2"
+        address_prefix = "10.0.2.0/24"
+      },
+      {
+        name = "subnet3"
+        address_prefix = "10.0.3.0/24"
+      }
     ]
   }
   dev1_network_interface = {

@@ -1,0 +1,81 @@
+resource "azurerm_public_ip" "publicips" {
+    count = var.number_of_machines
+    name                    = "${local.dev1_public_ip.name}${count.index}"
+    zones = [ "${count.index + 1}" ]
+    location                = azurerm_resource_group.app_rg_1101_dev01.location
+    resource_group_name     = azurerm_resource_group.app_rg_1101_dev01.name
+    allocation_method       = local.dev1_public_ip.allocation_method
+    idle_timeout_in_minutes = 30
+
+    tags = {
+        environment = "test"
+    }
+}
+
+resource "azurerm_network_interface" "nis" {
+  count = var.number_of_machines
+  name                = "${local.dev1_network_interface.name}${count.index}"
+  location            = azurerm_resource_group.app_rg_1101_dev01.location
+  resource_group_name = azurerm_resource_group.app_rg_1101_dev01.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.subnets[count.index].id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.publicips[count.index].id
+  }
+
+  depends_on = [ azurerm_subnet.subnets[0] ]
+}
+
+
+resource "azurerm_windows_virtual_machine" "dev1_windows_server" {
+    count = var.number_of_machines
+  name                = "dev1appvm${count.index}"
+  resource_group_name = azurerm_resource_group.app_rg_1101_dev01.name
+  location            = azurerm_resource_group.app_rg_1101_dev01.location
+  size                = "Standard_D2S_v3"
+  admin_username      = "adminuser"
+  admin_password = "Azure@123"
+  zone = (count.index +1)
+  network_interface_ids = [
+    azurerm_network_interface.nis[count.index].id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2019-Datacenter"
+    version   = "latest"
+  }
+
+  depends_on = [ azurerm_network_interface.nis, azurerm_resource_group.app_rg_1101_dev01 ]
+}
+
+resource "azurerm_managed_disk" "datadisks" {
+    count = var.number_of_machines
+  name                 = "datadisk1${count.index}"
+  location             = azurerm_resource_group.app_rg_1101_dev01.location
+  resource_group_name  = azurerm_resource_group.app_rg_1101_dev01.name
+  storage_account_type = "Standard_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = "16"
+
+  tags = {
+    environment = "staging"
+  }
+}
+
+
+resource "azurerm_virtual_machine_data_disk_attachment" "datadiskattachment1" {
+    count = var.number_of_machines
+  managed_disk_id    = azurerm_managed_disk.datadisks[count.index].id
+  virtual_machine_id = azurerm_windows_virtual_machine.dev1_windows_server[count.index].id
+  lun                = "10"
+  caching            = "ReadWrite"
+}
